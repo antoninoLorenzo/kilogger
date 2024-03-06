@@ -2,7 +2,9 @@
 This is an educational purpose keylogger.
 
 **What it can do?**
-Right now not so much, it can capture keys; also you can specify processes to listen to, when the 'victim' runs a program the logger starts logging.
+- [x] Capture and log pressed keys.
+- [ ] Watch processes to trigger keylogger.
+- [ ] Log clipboard.
 
 ## Installation
 **Manual**:  `pip install -r requirements.txt`
@@ -22,7 +24,13 @@ options:
                      by ", ".
 ```
 
-## Other
-[VirusTotal](https://www.virustotal.com/gui/home/upload) score (for `main.py`):
-
+## [VirusTotal](https://www.virustotal.com/gui/home/upload) score
 <img src="./static/virus_total_score.PNG" style="width:102px;height:102px"/>
+
+## Disclaimer
+**kilogger** is for educational purposes only. It's not intended for malicious use or unauthorized access. 
+
+By using this project, <u>you agree to use it responsibly and ethically</u>.
+- We are not responsible for any misuse of this tool, users are responsible for their actions. 
+- This project is provided "as is" without warranties. 
+- Use with explicit consent and respect for privacy.
