@@ -25,4 +25,4 @@ options:
 ## Other
 [VirusTotal](https://www.virustotal.com/gui/home/upload) score (for `main.py`):
 
-<img src="./static/virus_total_score.PNG" style="width:92px;height:92px"/>
+<img src="./static/virus_total_score.PNG" style="width:102px;height:102px"/>
