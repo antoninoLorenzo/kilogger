@@ -1,51 +1,10 @@
 name: "PyLint"
-description: "Perform pylint check on kilogger and update badge in README.md"
 
 on: [push]
-
-branding:
-  icon: edit-3
-  color: yellow
-inputs:
-  lint-path:
-    description: "The path, relative to the root of the repo, of the package(s) or python file(s) to lint"
-    required: true
-  python-version:
-    description: "Python version which will install all dependencies and lint package(s)"
-    required: true
-  requirements-path:
-    description: "The path, relative to the root of the repo, of the requirements to install"
-    default: requirements.txt
-    required: false
-  readme-path:
-    description: "The path, relative to the root of the repo, of the README.md to update with the pylint badge"
-    default: README.md
-    required: false
-  badge-text:
-    description: "Text to display in the badge"
-    default: PyLint
-    required: false
-  color-bad-score:
-    description: "Color of the badge for pylint scores < 5. Hex, rgb, rgba, hsl, hsla and css named colors can all be used"
-    default: red
-    required: false
-  color-ok-score:
-    description: "Color of the badge for pylint scores in range [5,8). Hex, rgb, rgba, hsl, hsla and css named colors can all be used"
-    default: orange
-    required: false
-  color-good-score:
-    description: "Color of the badge for pylint scores in range [8,10). Hex, rgb, rgba, hsl, hsla and css named colors can all be used"
-    default: yellow
-    required: false
-  color-perfect-score:
-    description: "Color of the badge for pylint scores == 10. Hex, rgb, rgba, hsl, hsla and css named colors can all be used"
-    default: brightgreen
-    required: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    using: "composite"
     steps:
       -
         name: "Checkout Repository - PR"
