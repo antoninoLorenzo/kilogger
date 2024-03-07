@@ -45,7 +45,7 @@ jobs:
           ls
           echo "Current"
           pwd
-          python ../kilogger/get_score_color.py \
+          python static/get_score_color.py \
           ${{ inputs.color-bad-score }} \
           ${{ inputs.color-ok-score }} \
           ${{ inputs.color-good-score }} \
