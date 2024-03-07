@@ -6,8 +6,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      REQUIREMENTS_PATH: 'requirements.txt'
       SRC_PATH: 'kilogger'
+      README_PATH: 'README.md'
+      REQUIREMENTS_PATH: 'requirements.txt'
+      P_SCORE: 'brightgreen'
+      G_SCORE: 'yellow'
+      O_SCORE: 'orange'
+      B_SCORE: 'red'
+      BADGE_TEXT: 'PyLint'
     steps:
       -
         name: "Checkout Repository - PR"
@@ -41,24 +47,19 @@ jobs:
         name: "Get numeric pylint score and badge color"
         id: parameters-badge
         run: |
-          echo "Current content:"
-          ls
-          echo "Current"
-          pwd
           python static/get_score_color.py \
-          ${{ inputs.color-bad-score }} \
-          ${{ inputs.color-ok-score }} \
-          ${{ inputs.color-good-score }} \
-          ${{ inputs.color-perfect-score }}
+          ${{ env.B_SCORE }} \
+          ${{ env.O_SCORE }} \
+          ${{ env.G_SCORE }} \
+          ${{ env.P_SCORE }}
         shell: bash
       -
-        # $(echo ${{ inputs.badge-text }} | sed 's/ /%20/g') replaces spaces with %20
         name: "Create badge and substitute it in README.md"
         run: |
-          python ${{ github.action_path }}/create_subs_badge.py \
-          ${{ inputs.readme-path }} \
+          python static/create_subs_badge.py \
+          ${{ env.README_PATH }} \
           ${{ steps.parameters-badge.outputs.pylint_score }} \
-          $(echo ${{ inputs.badge-text }} | sed 's/ /%20/g') \
+          $(echo ${{ env.BADGE_TEXT }} | sed 's/ /%20/g') \
           ${{ steps.parameters-badge.outputs.badge_color }}
         shell: bash
       -
