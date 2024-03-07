@@ -5,6 +5,9 @@ from pathlib import Path
 U_HOME = Path('~')
 LOGLOC = str(U_HOME.expanduser() / '.cache' / 'report.log')
 
+# time that is waited to interrupt logging and check running processes
+DEFAULT_TIMEOUT = 10
+
 
 def install_package(package):
     """runs pip install 'package'"""
@@ -19,18 +22,3 @@ def verify_package_installation(package):
         return True
     except ImportError:
         return False
-
-
-def coroutine(func):
-    """Basic Coroutine Decorator"""
-
-    def start(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        try:
-            next(cr)
-        except StopIteration:
-            return iter(lambda: None, None)
-        return cr
-
-    return start
-
