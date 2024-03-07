@@ -41,6 +41,7 @@ jobs:
         name: "Get numeric pylint score and badge color"
         id: parameters-badge
         run: |
+          echo ${{ github.action_path }}
           python ${{ github.action_path }}/get_score_color.py \
           ${{ inputs.color-bad-score }} \
           ${{ inputs.color-ok-score }} \
