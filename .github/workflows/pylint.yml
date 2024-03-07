@@ -26,7 +26,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install wheel pylint
-          pip install -r ${{ inputs.requirements-path }}
+          pip install -r requirements.txt
         shell: bash
       -
         name: "Lint package(s)"
