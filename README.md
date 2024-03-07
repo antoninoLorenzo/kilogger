@@ -1,4 +1,4 @@
-![pylint]()
+![pylint](https://img.shields.io/badge/PyLint-9.75-yellow?logo=python&logoColor=white)
 # Kilogger
 This is an educational purpose keylogger.
 
