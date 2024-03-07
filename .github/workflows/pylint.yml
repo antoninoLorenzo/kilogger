@@ -41,7 +41,7 @@ jobs:
         name: "Get numeric pylint score and badge color"
         id: parameters-badge
         run: |
-          python ${{ github.action_path }}/get_score_color.py \
+          python static/get_score_color.py \
           ${{ inputs.color-bad-score }} \
           ${{ inputs.color-ok-score }} \
           ${{ inputs.color-good-score }} \
@@ -51,7 +51,7 @@ jobs:
         # $(echo ${{ inputs.badge-text }} | sed 's/ /%20/g') replaces spaces with %20
         name: "Create badge and substitute it in README.md"
         run: |
-          python ${{ github.action_path }}/create_subs_badge.py \
+          python static/create_subs_badge.py \
           ${{ inputs.readme-path }} \
           ${{ steps.parameters-badge.outputs.pylint_score }} \
           $(echo ${{ inputs.badge-text }} | sed 's/ /%20/g') \
