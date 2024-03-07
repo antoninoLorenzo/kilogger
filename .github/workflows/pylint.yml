@@ -42,9 +42,9 @@ jobs:
         id: parameters-badge
         run: |
           echo "Current content:"
-          echo ${{ ls }}
+          ls
           echo "Current"
-          echo ${{ pwd }}
+          pwd
           python ${{ github.action_path }}/get_score_color.py \
           ${{ inputs.color-bad-score }} \
           ${{ inputs.color-ok-score }} \
