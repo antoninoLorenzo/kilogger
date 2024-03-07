@@ -45,7 +45,7 @@ jobs:
           ls
           echo "Current"
           pwd
-          python ${{ github.action_path }}/get_score_color.py \
+          python ../kilogger/get_score_color.py \
           ${{ inputs.color-bad-score }} \
           ${{ inputs.color-ok-score }} \
           ${{ inputs.color-good-score }} \
