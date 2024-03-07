@@ -24,7 +24,7 @@ TODO [ ]: Work on logging format
     what should be the output? (ex. date - running targets - input)
     can the output be buffered?
 TODO [x]: debug ListenerSocket
-TODO [ ]: fix pylint
+TODO [x]: fix pylint
 TODO [x]: fix pycharm
 TODO [x]: complete docs in code
 TODO [ ]: Implement capture copy to clipboard functionality
