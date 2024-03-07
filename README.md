@@ -3,7 +3,7 @@ This is an educational purpose keylogger.
 
 **What it can do?**
 - [x] Capture and log pressed keys.
-- [ ] Watch processes to trigger keylogger.
+- [x] Watch processes to trigger keylogger.
 - [ ] Log clipboard.
 
 ## Installation
