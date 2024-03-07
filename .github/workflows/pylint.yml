@@ -9,7 +9,7 @@ jobs:
       SRC_PATH: 'kilogger'
       README_PATH: 'README.md'
       REQUIREMENTS_PATH: 'requirements.txt'
-      P_SCORE: 'brightgreen'
+      P_SCORE: 'green'
       G_SCORE: 'yellow'
       O_SCORE: 'orange'
       B_SCORE: 'red'
