@@ -5,6 +5,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      REQUIREMENTS_PATH: 'requirements.txt'
+      SRC_PATH: 'kilogger'
     steps:
       -
         name: "Checkout Repository - PR"
@@ -26,12 +29,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install wheel pylint
-          pip install -r requirements.txt
+          pip install -r ${{env.REQUIREMENTS_PATH}}
         shell: bash
       -
         name: "Lint package(s)"
         run: |
-          pkgs_pth=$(python3 -c 'import re; print(" ".join(re.findall("([^\s]+)", ${{ toJSON("kilogger") }})))')
+          pkgs_pth=$(python3 -c 'import re; print(" ".join(re.findall("([^\s]+)", ${{ toJSON(env.SRC_PATH) }})))')
           pylint --exit-zero --output-format=text:pylint_score.txt,colorized $pkgs_pth
         shell: bash
       -
