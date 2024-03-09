@@ -25,6 +25,7 @@ from pathlib import Path
 # default log path
 U_HOME = Path('~')
 LOGLOC = str(U_HOME.expanduser() / '.cache' / 'report.log')
+CONFIG = str(Path(Path(__file__).parent / 'config.json'))
 
 # time that is waited to interrupt logging and check running processes
 DEFAULT_TIMEOUT = 10
