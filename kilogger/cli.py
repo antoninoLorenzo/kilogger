@@ -36,6 +36,7 @@ import socket
 import argparse
 import logging
 from threading import Thread, Event
+from pathlib import Path
 
 from kilogger import (
     LOGLOC,
@@ -70,6 +71,17 @@ class StringToList(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         values = list(map(lambda val: val.strip(), values.split(', ')))
         setattr(namespace, self.dest, values)
+
+
+class PathParser(argparse.Action):
+    """Parses the given path from the command line"""
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        out_path = Path(value)
+        if not (out_path.exists() and out_path.is_file()):
+            print(f'Invalid path: {value}')
+            sys.exit(1)
+        setattr(namespace, self.dest, value)
 
 
 class KLogger(Thread):
@@ -263,6 +275,14 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        '--output',
+        default=LOGLOC,
+        action=PathParser,
+        help='Path for the output log file (ex. ./output.log); '
+             'defaults to ~/.cache/report.log'
+    )
+
+    parser.add_argument(
         '--force',
         type=int, choices=[0, 1],
         default=None,
@@ -283,7 +303,7 @@ def main():
             and friendly_check()):  # big brain time
         print('Hello World')
     else:
-        logging.basicConfig(filename=LOGLOC, level=logging.DEBUG)
+        logging.basicConfig(filename=args.output, level=logging.DEBUG)
 
         # --- Run logger
         logger_factory = KLoggerFactory()
