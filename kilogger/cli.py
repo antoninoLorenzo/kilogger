@@ -18,7 +18,11 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 
+TODO [ ]: debug run without arguments
+TODO [ ]: automatically run in background
 TODO [ ]: Implement capture copy to clipboard functionality
+TODO [ ]: Remote access to logs
+TODO [ ]: executable gets detected by: see .report
 """
 
 import sys
