@@ -8,13 +8,15 @@ This is an educational purpose keylogger.
 - [ ] Log clipboard.
 
 ## Installation
-**Manual**:  `pip install -r requirements.txt`
-Otherwise just run and it will install automatically:
+Execute:  `pip install -r requirements.txt`
+
+## Usage
+**Run**
 ```
 python -m kilogger.cli [ARGS]
 ```
 
-## Usage
+**Help**
 ```
 usage: cli.py [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS]
 
