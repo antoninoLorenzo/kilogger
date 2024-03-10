@@ -70,11 +70,8 @@ class PathParser(argparse.Action):
     """Parses the given path from the command line"""
 
     def __call__(self, parser, namespace, value, option_string=None):
-        # It should verify that the given path is for a file, not that it already exists
-        # out_path = Path(value)
-        # if not (out_path.exists() and out_path.is_file()):
-        #     print(f'Invalid path: {value}')
-        #     sys.exit(1)
+        # It should verify that the given path
+        # is for a file, not that it already exists
         setattr(namespace, self.dest, value)
 
 
@@ -305,13 +302,8 @@ def main():
             and friendly_check()):  # big brain time
         print('Hello World')
     else:
-        with open(CONFIG, 'rt') as conf:
-            config = json.load(conf)
-
-        config['handlers']['file']['filename'] = args.output
-        logging.config.dictConfig(config)
-        # logger = logging.getLogger('kilogger')
-        # logging.basicConfig(filename=args.output, level=logging.DEBUG)
+        CONFIG['handlers']['file']['filename'] = args.output
+        logging.config.dictConfig(CONFIG)
 
         # --- Run logger
         logger_factory = KLoggerFactory()

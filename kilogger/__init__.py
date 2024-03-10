@@ -25,10 +25,35 @@ from pathlib import Path
 # default log path
 U_HOME = Path('~')
 LOGLOC = str(U_HOME.expanduser() / '.cache' / 'report.log')
-CONFIG = str(Path(Path(__file__).parent / 'config.json'))
 
 # time that is waited to interrupt logging and check running processes
 DEFAULT_TIMEOUT = 10
+
+CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "%(message)s"
+        }
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "INFO",
+            "formatter": "simple",
+            "filename": "./out",
+            "maxBytes": 100000,
+            "backupCount": 3
+        }
+    },
+    "loggers": {
+        "root": {
+            "level": "INFO",
+            "handlers": ["file"]
+        }
+    }
+}
 
 
 def install_package(package):
