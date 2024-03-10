@@ -14,7 +14,7 @@ Execute:  `pip install -r requirements.txt`
 ## Usage
 **Run**
 ```
-python -m kilogger.cli [ARGS]
+python kilogger.py [ARGS]
 ```
 
 **Help**
@@ -27,6 +27,8 @@ options:
   --force {0,1}      0: do not force logger if AV is on. 1: fuck it
   --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
 ```
+
+*PS: if the antivirus is on use:* `--force 1`
 
 ## AV Detection
 On [VirusTotal](https://www.virustotal.com/gui/home/upload) the score for `cli.py` file is the following:
