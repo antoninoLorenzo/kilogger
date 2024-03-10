@@ -24,7 +24,6 @@ TODO [ ]: Implement capture copy to clipboard functionality
 import sys
 import time
 import socket
-import json
 import argparse
 import logging
 import logging.config
