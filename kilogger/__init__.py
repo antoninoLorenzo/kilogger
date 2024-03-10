@@ -26,9 +26,7 @@ from pathlib import Path
 U_HOME = Path('~')
 LOGLOC = str(U_HOME.expanduser() / '.cache' / 'report.log')
 
-# time that is waited to interrupt logging and check running processes
-DEFAULT_TIMEOUT = 10
-
+# configuration for logging management
 CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -54,6 +52,15 @@ CONFIG = {
         }
     }
 }
+
+# time that is waited to interrupt logging and check running processes
+DEFAULT_TIMEOUT = 10
+
+# response for http://127.0.0.1:65432/terminate
+MSG = 'Closed'
+STOP_RESPONSE = (f"HTTP/1.1 200 OK\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"Content-Length: {len(MSG)}\r\n\r\n{MSG}")
 
 
 def install_package(package):
