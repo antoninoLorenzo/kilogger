@@ -9,7 +9,19 @@ This is an educational purpose keylogger.
 - [ ] Acquire logs from remote.
 
 ## Installation
-Execute:  `pip install -r requirements.txt`
+1. Clone the repository:
+```
+git clone https://github.com/antoninoLorenzo/kilogger.git
+```
+
+2. Install dependencies:
+```
+cd kilogger && pip install -r requirements.txt
+```
+
+**Dependencies**
+- pynput
+- psutil
 
 ## Usage
 **Run**
