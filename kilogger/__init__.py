@@ -18,8 +18,8 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 """
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 # default log path

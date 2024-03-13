@@ -18,10 +18,10 @@ is provided "as is" without warranties.
 Author: Antonino Lorenzo
 Version: 1.0.0
 """
-import sys
 import subprocess
-from kilogger.cli import main
+import sys
 
+from kilogger.cli import main
 
 if __name__ == '__main__':
     if sys.argv[1] == '--help':
