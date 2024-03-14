@@ -25,8 +25,8 @@ import socket
 import sys
 import time
 from abc import ABC, abstractmethod
-from threading import Event, Thread
 from logging.handlers import RotatingFileHandler
+from threading import Event, Thread
 
 from kilogger import (CONFIG, DEFAULT_TIMEOUT, LOGLOC, STOP_RESPONSE,
                       install_package, verify_package_installation)
