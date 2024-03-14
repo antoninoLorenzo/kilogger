@@ -33,13 +33,16 @@ python kilogger.py [ARGS]
 
 **Help**
 ```
-usage: cli.py [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS]
+usage: kilogger.exe [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS] [--max-bytes MAX_BYTES]
 
 options:
-  -h, --help         show this help message and exit
-  --output OUTPUT    Path for the output log file (ex. ./output.log); defaults to ~/.cache/report.log
-  --force {0,1}      0: do not force logger if AV is on. 1: fuck it
-  --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
+  -h, --help            show this help message and exit
+  --output OUTPUT       Path for the output log file (ex. ./output.log); defaults to ~/.cache/report.log
+  --force {0,1}         0: do not force logger if AV is on. 1: fuck it
+  --targets TARGETS     Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be
+                        separated by ", ".
+  --max-bytes MAX_BYTES
+                        Specify the maximum size fo
 ```
 
 *PS: if the antivirus is on use:* `--force 1`
