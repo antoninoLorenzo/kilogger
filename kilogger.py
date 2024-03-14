@@ -23,7 +23,7 @@ import sys
 from kilogger.cli import main
 
 if __name__ == '__main__':
-    if sys.argv[1] == '--help':
+    if len(sys.argv) > 1 and sys.argv[1] == '--help':
         main(sys.argv)
     else:
         args = ['python', '-m', 'kilogger.cli']
