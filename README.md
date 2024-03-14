@@ -1,4 +1,4 @@
-![pylint](https://img.shields.io/badge/PyLint-9.84-yellow?logo=python&logoColor=white)
+![pylint](https://img.shields.io/badge/PyLint-9.90-yellow?logo=python&logoColor=white)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
 # Kilogger
@@ -33,13 +33,16 @@ python kilogger.py [ARGS]
 
 **Help**
 ```
-usage: cli.py [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS]
+usage: kilogger.exe [-h] [--output OUTPUT] [--force {0,1}] [--targets TARGETS] [--max-bytes MAX_BYTES]
 
 options:
-  -h, --help         show this help message and exit
-  --output OUTPUT    Path for the output log file (ex. ./output.log); defaults to ~/.cache/report.log
-  --force {0,1}      0: do not force logger if AV is on. 1: fuck it
-  --targets TARGETS  Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be separated by ", ".
+  -h, --help            show this help message and exit
+  --output OUTPUT       Path for the output log file (ex. ./output.log); defaults to ~/.cache/report.log
+  --force {0,1}         0: do not force logger if AV is on. 1: fuck it
+  --targets TARGETS     Name of target processes (ex. "chrome.exe, firefox.exe"); note: process names should be
+                        separated by ", ".
+  --max-bytes MAX_BYTES
+                        Specify the maximum size fo
 ```
 
 *PS: if the antivirus is on use:* `--force 1`
