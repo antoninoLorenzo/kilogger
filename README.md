@@ -7,8 +7,8 @@ This is an educational purpose keylogger.
 **What it can do?**
 - [x] Capture and log pressed keys.
 - [x] Watch processes to trigger keylogger.
-- [ ] Log clipboard.
-- [ ] Acquire logs from remote.
+- [x] Auto closes on a set logfile size.
+- [ ] Remote access to log file.
 
 ## Installation
 1. Clone the repository:
