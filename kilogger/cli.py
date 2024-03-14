@@ -15,7 +15,6 @@ The developers of this project are not responsible for any misuse of
 this tool, and users are responsible for their actions. This project
 is provided "as is" without warranties.
 
-Author: Antonino Lorenzo
 Version: 1.0.0
 
 TODO [ ]: Implement capture copy to clipboard functionality
