@@ -1,3 +1,6 @@
 */log.txt
 .idea
 .report
+dist
+kilogger.spec
+cli.spec

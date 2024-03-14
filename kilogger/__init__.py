@@ -36,11 +36,12 @@ CONFIG = {
     },
     "handlers": {
         "file": {
-            "class": "logging.handlers.RotatingFileHandler",
+            # "class": "logging.handlers.RotatingFileHandler",
+            "class": "kilogger.cli.AutoDestroyHandler",
             "level": "INFO",
             "formatter": "simple",
             "filename": "./out",
-            "maxBytes": 100000,
+            "maxBytes": 10000,
             "backupCount": 3
         }
     },

