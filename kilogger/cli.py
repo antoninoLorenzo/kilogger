@@ -83,7 +83,7 @@ class AutoDestroyHandler(RotatingFileHandler):
     to stop the logger once maxBytes is reached
     """
     def doRollover(self):
-        requests.get('http://127.0.0.1:65432/terminate')
+        requests.get('http://127.0.0.1:65432/terminate', timeout=5)
 
 
 class KeyboardManager(ABC):
