@@ -24,6 +24,7 @@ cd kilogger && pip install -r requirements.txt
 **Dependencies**
 - pynput
 - psutil
+- requests
 
 ## Usage
 **Run**
